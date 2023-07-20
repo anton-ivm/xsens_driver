@@ -1,40 +1,49 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
-project(xsens_driver)
-
-set(CMAKE_BUILD_TYPE Release CACHE STRING "build type")
-cmake_policy(SET CMP0057 NEW)
-
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
-
-link_directories(lib/xspublic/xscontroller lib/xspublic/xscommon lib/xspublic/xstypes)
-add_executable(example main.cpp)
-target_include_directories(example PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/xspublic>
-  $<INSTALL_INTERFACE:include>)
-
-target_link_libraries(example xscommon xscontroller xstypes pthread dl)
+cmake_minimum_required (VERSION 3.18 FATAL_ERROR)
+project(xspublic LANGUAGES CXX C)
 
 
-# include_directories(${PROJECT_SOURCE_DIR}/xspublic)
-# link_directories(${PROJECT_SOURCE_DIR}/xspublic/xscommon)
-# link_directories(${PROJECT_SOURCE_DIR}/xspublic/xscontroller)
-# link_directories(${PROJECT_SOURCE_DIR}/xspublic/xstypes)
-# include_directories(${PROJECT_SOURCE_DIR}/xscontroller)
-# include_directories(${PROJECT_SOURCE_DIR}/xstypes)
-# include(ExternalProject)
-# ExternalProject_Add(xspublic
-#   SOURCE_DIR ${PROJECT_SOURCE_DIR}/xspublic
-#   INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/install
-#   CONFIGURE_COMMAND ""
-#   BUILD_COMMAND ${CMAKE_COMMAND} -E env
-#     HOST_CC=
-#     CC=${CMAKE_C_COMPILER}
-#     make -C <SOURCE_DIR>
-#     BUILD_IN_SOURCE TRUE
-#     # INSTALL COMMAND make DESTDIR=<INSTALL_DIR> install
-#     INSTALL_COMMAND "" 
-# )
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# add_executable(example ${PROJECT_SOURCE_DIR}/examples/example_mti_receive_data.cpp)
+set(CMAKE_C_FLAGS "-W -Wall -fPIC -include xstypes/xsens_compat.h -include xscontroller/xscontrollerconfig.h -DHAVE_JOURNALLER")
+set(CMAKE_CXX_FLAGS "-W -Wall -std=c++11 -fPIC -include xscommon/xscommon_config.h -include xstypes/xsens_compat.h -include xscontroller/xscontrollerconfig.h -DHAVE_JOURNALLER")
+
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib/)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/)
+
+include_directories(xspublic)
+
+
+# xstypes
+file(GLOB_RECURSE SRC xspublic/xstypes/*.c)
+add_library(xstypesc ${SRC})
+set_target_properties(xstypesc PROPERTIES LINKER_LANGUAGE C)
+
+file(GLOB_RECURSE SRC xspublic/xstypes/*.cpp)
+add_library(xstypes ${SRC})
+target_link_libraries(xstypes xstypesc)
+
+# xscommon
+file(GLOB_RECURSE SRC xspublic/xscommon/*.c)
+add_library(xbus ${SRC})
+set_target_properties(xbus PROPERTIES LINKER_LANGUAGE C)
+
+file(GLOB_RECURSE SRC xspublic/xscommon/*.cpp)
+add_library(xscommon ${SRC})
+target_link_libraries(xscommon xbus xstypes)
+
+# xscontroller
+file(GLOB_RECURSE SRC xspublic/xscontroller/*.c)
+add_library(xsdevicestate ${SRC})
+set_target_properties(xsdevicestate PROPERTIES LINKER_LANGUAGE C)
+
+file(GLOB_RECURSE SRC xspublic/xscontroller/*.cpp)
+add_library(xscontroller ${SRC})
+target_link_libraries(xscontroller xsdevicestate xscommon)
+
+# example
+add_executable(example example_mti_receive_data.cpp)
+target_link_libraries(example xscommon xscontroller xstypes)

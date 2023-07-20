@@ -1,3 +1,7 @@
 *.o
 *.a
 *.d
+
+bin
+lib
+build
